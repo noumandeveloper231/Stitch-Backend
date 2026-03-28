@@ -9,16 +9,9 @@ const errorHandler = require("./middleware/errorHandler");
 
 const app = express();
 
-const clientOrigins = process.env.CLIENT_URL
-  ? process.env.CLIENT_URL.split(",").map((s) => s.trim())
-  : ["http://localhost:5173"];
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",")
 
-app.use(
-  cors({
-    origin: clientOrigins,
-    credentials: true,
-  }),
-);
+app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json());
 
 const dbReady = connectDB();
