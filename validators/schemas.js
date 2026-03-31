@@ -1,5 +1,5 @@
 const Joi = require("joi");
-const { ORDER_STATUSES, USER_ROLES } = require("../config/constants");
+const { ORDER_STATUSES, PAYMENT_STATUSES, USER_ROLES } = require("../config/constants");
 const {
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
@@ -30,7 +30,7 @@ exports.logoutSchema = Joi.object({
 
 exports.customerCreateSchema = Joi.object({
   name: Joi.string().trim().min(1).max(200).required(),
-  phone: Joi.string().trim().allow("").max(40),
+  phone: Joi.string().trim().min(1).max(40).required(),
   email: Joi.alternatives()
     .try(Joi.string().trim().valid(""), Joi.string().trim().email().max(200))
     .optional(),
@@ -40,7 +40,7 @@ exports.customerCreateSchema = Joi.object({
 
 exports.customerUpdateSchema = Joi.object({
   name: Joi.string().trim().min(1).max(200),
-  phone: Joi.string().trim().allow("").max(40),
+  phone: Joi.string().trim().min(1).max(40),
   email: Joi.alternatives()
     .try(Joi.string().trim().valid(""), Joi.string().trim().email().max(200))
     .optional(),
@@ -86,23 +86,33 @@ exports.measurementIdParams = Joi.object({
   id: objectId.required(),
 });
 
+exports.orderItemSchema = Joi.object({
+  name: Joi.string().trim().required(),
+  cost: Joi.number().min(0).required(),
+});
+
 exports.orderCreateSchema = Joi.object({
   customerId: objectId.required(),
   status: Joi.string().valid(...ORDER_STATUSES),
-  totalAmount: Joi.number().min(0).default(0),
+  items: Joi.array().items(exports.orderItemSchema).default([]),
+  price: Joi.number().min(0).default(0),
   advance: Joi.number().min(0).default(0),
-  remaining: Joi.number().min(0).default(0),
   deliveryDate: Joi.alternatives().try(Joi.date(), Joi.allow(null)),
   notes: Joi.string().allow("").max(2000),
 });
 
 exports.orderUpdateSchema = Joi.object({
   status: Joi.string().valid(...ORDER_STATUSES),
-  totalAmount: Joi.number().min(0),
-  advance: Joi.number().min(0),
+  paymentStatus: Joi.string().valid(...PAYMENT_STATUSES),
+  items: Joi.array().items(exports.orderItemSchema),
+  price: Joi.number().min(0),
   deliveryDate: Joi.alternatives().try(Joi.date(), Joi.allow(null)),
   notes: Joi.string().allow("").max(2000),
 }).min(1);
+
+exports.orderPaymentSchema = Joi.object({
+  amount: Joi.number().min(0.01).required(),
+});
 
 exports.orderStatusSchema = Joi.object({
   status: Joi.string()

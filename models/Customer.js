@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const customerSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
-    phone: { type: String, trim: true, default: "" },
+    phone: { type: String, trim: true, required: true, unique: true },
     email: { type: String, trim: true, lowercase: true, default: "" },
     address: { type: String, trim: true, default: "" },
     notes: { type: String, trim: true, default: "" },
