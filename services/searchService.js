@@ -21,9 +21,25 @@ async function globalSearch(q, limit) {
   if (mongoose.Types.ObjectId.isValid(q) && String(q).length === 24) {
     const one = await Order.findById(q)
       .populate("customerId", "name phone")
-      .select("status totalAmount customerId createdAt")
+      .select("status price customerId createdAt")
       .lean();
     if (one) ordersById.push(one);
+  } else if (q.length >= 4 && /^[0-9a-fA-F]+$/.test(q)) {
+    // Add partial ID search to global search too
+    const partialOrders = await Order.find({
+      $expr: {
+        $regexMatch: {
+          input: { $toString: "$_id" },
+          regex: escapeRegex(q.trim()) + "$",
+          options: "i"
+        }
+      }
+    })
+      .populate("customerId", "name phone")
+      .select("status price customerId createdAt")
+      .limit(lim)
+      .lean();
+    ordersById.push(...partialOrders);
   }
 
   const customerIdsFromSearch = customers.map((c) => c._id);
@@ -34,7 +50,7 @@ async function globalSearch(q, limit) {
 
   const ordersFromQuery = await Order.find({ $or: orClause })
     .populate("customerId", "name phone")
-    .select("status totalAmount customerId notes createdAt")
+    .select("status price customerId notes createdAt")
     .sort({ createdAt: -1 })
     .limit(lim)
     .lean();
@@ -48,7 +64,7 @@ async function globalSearch(q, limit) {
     orders.push({
       _id: o._id,
       status: o.status,
-      totalAmount: o.totalAmount,
+      price: o.price,
       createdAt: o.createdAt,
       customerName: o.customerId?.name || null,
       customerId: o.customerId?._id || o.customerId,

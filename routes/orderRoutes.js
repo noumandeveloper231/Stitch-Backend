@@ -11,6 +11,7 @@ const {
   orderStatusSchema,
   orderListQuerySchema,
   orderIdParams,
+  orderPaymentSchema,
 } = require("../validators/schemas");
 const {
   createOrder,
@@ -20,11 +21,18 @@ const {
   updateOrderStatus,
   updateOrder,
   deleteOrder,
+  addPayment,
 } = require("../controllers/orderController");
 
 router.use(requireAuth);
 
 router.post("/", validateBody(orderCreateSchema), createOrder);
+router.post(
+  "/:id/payment",
+  validateParams(orderIdParams),
+  validateBody(orderPaymentSchema),
+  addPayment,
+);
 router.get("/", validateQuery(orderListQuerySchema), getOrders);
 router.get(
   "/:id/invoice/pdf",

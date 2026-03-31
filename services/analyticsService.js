@@ -47,14 +47,14 @@ async function getDashboard({ from, to }) {
     ]),
     Order.aggregate([
       { $match: dateMatch },
-      { $group: { _id: null, total: { $sum: "$totalAmount" } } },
+      { $group: { _id: null, total: { $sum: "$price" } } },
     ]),
     Order.aggregate([
       { $match: dateMatch },
       {
         $group: {
           _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-          revenue: { $sum: "$totalAmount" },
+          revenue: { $sum: "$price" },
         },
       },
       { $sort: { _id: 1 } },
@@ -63,14 +63,14 @@ async function getDashboard({ from, to }) {
       .sort({ createdAt: -1 })
       .limit(10)
       .populate("customerId", "name phone email")
-      .select("customerId status totalAmount advance remaining deliveryDate createdAt")
+      .select("customerId status price totalPaid remaining deliveryDate createdAt profit")
       .lean(),
     Order.aggregate([
       { $match: dateMatch },
       {
         $group: {
           _id: "$customerId",
-          totalSpent: { $sum: "$totalAmount" },
+          totalSpent: { $sum: "$price" },
           orderCount: { $sum: 1 },
         },
       },

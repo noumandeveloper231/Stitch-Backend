@@ -31,6 +31,7 @@ app.use("/api/measurements", require("./routes/measurementRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/search", require("./routes/searchRoutes"));
+app.use("/api/cron", require("./routes/cronRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Stitch API running");

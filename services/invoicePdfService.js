@@ -60,23 +60,54 @@ function renderInvoicePdf(order) {
       doc.moveDown(1);
     }
 
-    doc.fontSize(11).text("Order summary", { underline: true });
+    if (order.items && order.items.length > 0) {
+      doc.fontSize(11).text("Cost Breakdown", { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(10);
+      order.items.forEach((item) => {
+        const y = doc.y;
+        doc.text(item.name, 48, y);
+        doc.text(money(item.cost), 400, y, { width: 100, align: "right" });
+        doc.moveDown(0.5);
+      });
+      const totalCostY = doc.y;
+      doc.font("Helvetica-Bold");
+      doc.text("Total Production Cost", 48, totalCostY);
+      doc.text(money(order.totalCost), 400, totalCostY, { width: 100, align: "right" });
+      doc.font("Helvetica");
+      doc.moveDown(1);
+    }
+
+    doc.fontSize(11).text("Financial Summary", { underline: true });
     doc.moveDown(0.5);
     doc.fontSize(10);
     const y0 = doc.y;
-    doc.text("Total", 48, y0);
-    doc.text(money(order.totalAmount), 400, y0, { width: 100, align: "right" });
+    doc.text("Customer Price", 48, y0);
+    doc.text(money(order.price), 400, y0, { width: 100, align: "right" });
     doc.moveDown(0.6);
     const y1 = doc.y;
-    doc.text("Advance paid", 48, y1);
-    doc.text(money(order.advance), 400, y1, { width: 100, align: "right" });
+    doc.text("Total Paid", 48, y1);
+    doc.text(money(order.totalPaid), 400, y1, { width: 100, align: "right" });
     doc.moveDown(0.6);
     const y2 = doc.y;
     doc.font("Helvetica-Bold");
-    doc.text("Balance due", 48, y2);
+    doc.text("Balance Due", 48, y2);
     doc.text(money(order.remaining), 400, y2, { width: 100, align: "right" });
     doc.font("Helvetica");
     doc.moveDown(1);
+
+    if (order.payments && order.payments.length > 0) {
+      doc.fontSize(11).text("Payment History", { underline: true });
+      doc.moveDown(0.5);
+      doc.fontSize(9);
+      order.payments.forEach((p) => {
+        const y = doc.y;
+        doc.text(new Date(p.date).toLocaleDateString(), 48, y);
+        doc.text(money(p.amount), 400, y, { width: 100, align: "right" });
+        doc.moveDown(0.4);
+      });
+      doc.moveDown(1);
+    }
 
     if (order.deliveryDate) {
       doc.fontSize(10).text(
