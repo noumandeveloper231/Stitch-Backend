@@ -1,5 +1,4 @@
 const mongoose = require("mongoose");
-const { USER_ROLES } = require("../config/constants");
 
 const userSchema = new mongoose.Schema(
   {
@@ -11,11 +10,14 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    password: { type: String, required: true, select: false },
+    password: { type: String, select: false }, // Password can be null initially if tempPassword exists
+    tempPassword: { type: String, default: "" }, // Used for first-time login
+    phone: { type: String, trim: true, default: "" },
+    profilePicture: { type: String, default: "" },
     role: {
-      type: String,
-      enum: USER_ROLES,
-      default: "staff",
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      required: true,
     },
   },
   { timestamps: true },

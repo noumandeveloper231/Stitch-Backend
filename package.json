@@ -5,13 +5,15 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "cross-env NODE_ENV=development nodemon server.js"
+    "dev": "cross-env NODE_ENV=development nodemon server.js",
+    "roles:sync": "node scripts/syncRolePermissions.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "axios": "^1.14.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
@@ -20,7 +22,8 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.1",
     "pdfkit": "^0.17.2",
-    "resend": "^6.9.4"
+    "resend": "^6.9.4",
+    "ua-parser-js": "^2.0.9"
   },
   "devDependencies": {
     "cross-env": "^7.0.3",

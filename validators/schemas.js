@@ -1,5 +1,7 @@
 const Joi = require("joi");
 const { ORDER_STATUSES, PAYMENT_STATUSES, USER_ROLES } = require("../config/constants");
+const { DEFAULT_EMAIL_TEMPLATES } = require("../services/emailTemplateDefaults");
+const { PERMISSION_MODULES } = require("../config/permissions");
 const {
   DEFAULT_PAGE,
   DEFAULT_LIMIT,
@@ -143,3 +145,44 @@ exports.searchQuerySchema = Joi.object({
   q: Joi.string().trim().min(1).max(200).required(),
   limit: Joi.number().integer().min(1).max(20).default(8),
 });
+
+const allowedTemplateKeys = DEFAULT_EMAIL_TEMPLATES.map((t) => t.key);
+const placeholderToken = /^\{\{[a-zA-Z0-9_]+\}\}$/;
+
+exports.emailTemplateKeyParams = Joi.object({
+  key: Joi.string()
+    .trim()
+    .valid(...allowedTemplateKeys)
+    .required(),
+});
+
+exports.emailTemplateUpdateSchema = Joi.object({
+  templateName: Joi.string().trim().min(1).max(200),
+  templateType: Joi.string().trim().min(1).max(120),
+  placeholders: Joi.array().items(Joi.string().trim().pattern(placeholderToken)).max(200),
+  enabled: Joi.boolean(),
+  subject: Joi.string().trim().min(1).max(500),
+  body: Joi.string().min(1),
+}).min(1);
+
+const rolePermissionSchema = Joi.object({
+  show: Joi.boolean().default(false),
+  create: Joi.boolean().default(false),
+  delete: Joi.boolean().default(false),
+  manage: Joi.boolean().default(false),
+});
+
+const permissionsShape = PERMISSION_MODULES.reduce((acc, moduleName) => {
+  acc[moduleName] = rolePermissionSchema;
+  return acc;
+}, {});
+
+exports.roleCreateSchema = Joi.object({
+  title: Joi.string().trim().min(1).max(120).required(),
+  permissions: Joi.object(permissionsShape).required(),
+});
+
+exports.roleUpdateSchema = Joi.object({
+  title: Joi.string().trim().min(1).max(120),
+  permissions: Joi.object(permissionsShape),
+}).min(1);

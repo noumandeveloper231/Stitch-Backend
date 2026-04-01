@@ -6,6 +6,8 @@ dotenv.config();
 
 const connectDB = require("./config/db");
 const errorHandler = require("./middleware/errorHandler");
+const { ensureDefaultTemplates } = require("./services/emailTemplateService");
+const { ensureSystemRolePermissions } = require("./services/rolePermissionService");
 
 const app = express();
 
@@ -24,11 +26,22 @@ app.use(async (req, res, next) => {
   }
 });
 
+dbReady
+  .then(async () => {
+    await ensureDefaultTemplates();
+    await ensureSystemRolePermissions();
+  })
+  .catch((err) => console.error("Startup permission/template sync failed:", err?.message || err));
+
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/roles", require("./routes/roleRoutes"));
+app.use("/api/history", require("./routes/historyRoutes"));
 app.use("/api/customers", require("./routes/customerRoutes"));
 app.use("/api/orders", require("./routes/orderRoutes"));
 app.use("/api/measurements", require("./routes/measurementRoutes"));
 app.use("/api/analytics", require("./routes/analyticsRoutes"));
+app.use("/api/email-templates", require("./routes/emailTemplateRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/search", require("./routes/searchRoutes"));
 app.use("/api/cron", require("./routes/cronRoutes"));

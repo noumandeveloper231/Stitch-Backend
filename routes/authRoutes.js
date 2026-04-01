@@ -13,10 +13,12 @@ const {
   refresh,
   logout,
   me,
+  changePassword,
 } = require("../controllers/authController");
 
 router.post("/register", validateBody(registerSchema), register);
 router.post("/login", validateBody(loginSchema), login);
+router.post("/change-password", requireAuth, changePassword);
 router.post("/refresh", validateBody(refreshSchema), refresh);
 router.post("/logout", validateBody(logoutSchema), logout);
 router.get("/me", requireAuth, me);

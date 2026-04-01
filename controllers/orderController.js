@@ -6,6 +6,7 @@ const {
   createOrderWithMeasurement,
   applyOrderUpdates,
   addPaymentToOrder,
+  sendOrderDeliveryAlert,
 } = require("../services/orderService");
 const { renderInvoicePdf } = require("../services/invoicePdfService");
 
@@ -25,11 +26,10 @@ exports.addPayment = asyncHandler(async (req, res) => {
 });
 
 exports.getOrders = asyncHandler(async (req, res) => {
-  const { status, customerId, from, to, dateField, page, limit, q, priority } = req.query;
+  const { status, customerId, from, to, dateField, page, limit, q } = req.query;
   const filter = {};
   if (status) filter.status = status;
   if (customerId) filter.customerId = customerId;
-  if (priority) filter.priority = priority;
 
   if (q) {
     const rx = new RegExp(escapeRegex(q.trim()), "i");
@@ -50,7 +50,7 @@ exports.getOrders = asyncHandler(async (req, res) => {
     if (mongoose.Types.ObjectId.isValid(q) && String(q).length === 24) {
       orClause.push({ _id: q });
     } else if (q.length >= 4 && /^[0-9a-fA-F]+$/.test(q)) {
-      // Use $expr with $toString for partial ID search on ObjectId
+
       orClause.push({
         $expr: {
           $regexMatch: {
@@ -78,35 +78,19 @@ exports.getOrders = asyncHandler(async (req, res) => {
 
   const skip = (page - 1) * limit;
   
-  // Sorting logic: High -> Medium -> Low -> Completed, then by createdAt
-  const priorityOrder = { high: 1, medium: 2, low: 3, completed: 4 };
-  
   const [items, total] = await Promise.all([
     Order.find(filter)
       .populate("customerId")
       .populate("measurementId")
-      .sort({ currentPriority: 1, createdAt: -1 }) // currentPriority is already low/medium/high/completed
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
     Order.countDocuments(filter),
   ]);
 
-  // If we need manual sorting because of alphabetical order of priority strings:
-  // But currentPriority strings are 'high', 'low', 'medium'.
-  // We should actually use a numerical field or sort in JS if limit is small.
-  // Given we have currentPriority, let's use a sort weight or just map them.
-  
-  // Re-sorting in memory to ensure exact requirement: High -> Medium -> Low
-  const sortedItems = items.sort((a, b) => {
-    const pA = priorityOrder[a.currentPriority] || 99;
-    const pB = priorityOrder[b.currentPriority] || 99;
-    if (pA !== pB) return pA - pB;
-    return new Date(b.createdAt) - new Date(a.createdAt);
-  });
-
   res.json({
-    data: sortedItems,
+    data: items,
     meta: { page, limit, total, pages: Math.ceil(total / limit) || 1 },
   });
 });
@@ -149,6 +133,9 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     const err = new Error("Order not found");
     err.statusCode = 404;
     throw err;
+  }
+  if (order.status === "delivered") {
+    await sendOrderDeliveryAlert(order);
   }
   res.json({ data: order });
 });
