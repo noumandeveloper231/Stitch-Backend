@@ -7,7 +7,12 @@ exports.register = asyncHandler(async (req, res) => {
 });
 
 exports.login = asyncHandler(async (req, res) => {
-  const result = await authService.login(req.body);
+  const result = await authService.login(req.body, req);
+  res.json({ data: result });
+});
+
+exports.changePassword = asyncHandler(async (req, res) => {
+  const result = await authService.changePassword(req.user.id, req.body);
   res.json({ data: result });
 });
 

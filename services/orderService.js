@@ -1,9 +1,15 @@
 const Order = require("../models/Order");
 const Measurement = require("../models/Measurement");
-const { calculateAutoPriority } = require("./priorityService");
+const { DEFAULT_COST_ITEMS } = require("../config/constants");
+const { sendTemplatedEmail } = require("./emailSenderService");
+const { EMAIL_TEMPLATE_KEYS } = require("./emailTemplateDefaults");
+
+function fmtAmount(v) {
+  return Number(v || 0).toLocaleString();
+}
 
 async function createOrderWithMeasurement(payload) {
-  const { customerId, items, price, advance, status, deliveryDate, notes, priority } = payload;
+  const { customerId, items, price, advance, status, deliveryDate, notes } = payload;
   const latest = await Measurement.findOne({ customerId })
     .sort({ createdAt: -1 })
     .lean();
@@ -19,19 +25,13 @@ async function createOrderWithMeasurement(payload) {
     paymentStatus = totalPaid >= priceNum ? "paid" : "partially_paid";
   }
 
-  const priorityVal = priority || "auto";
-  let currentPriority = priorityVal;
-  if (priorityVal === "auto") {
-    currentPriority = calculateAutoPriority(createdAt, deliveryDate);
-  }
-
   const doc = {
     customerId,
     status: status || "pending",
     paymentStatus,
-    priority: priorityVal,
-    currentPriority,
-    items: items || [],
+    items: (items && items.length > 0) 
+      ? items 
+      : DEFAULT_COST_ITEMS.map(name => ({ name, cost: 0 })),
     price: priceNum,
     payments,
     totalCost,
@@ -48,7 +48,32 @@ async function createOrderWithMeasurement(payload) {
   };
 
   const order = await Order.create(doc);
-  return Order.findById(order._id).populate("customerId").populate("measurementId");
+  const populated = await Order.findById(order._id).populate("customerId").populate("measurementId");
+  if (populated?.customerId?.email) {
+    try {
+      await sendTemplatedEmail({
+        templateKey: EMAIL_TEMPLATE_KEYS.NEW_ORDER,
+        to: populated.customerId.email,
+        variables: {
+          user_name: populated.customerId.name || "",
+          order_id: String(populated._id).slice(-6).toUpperCase(),
+          order_date: new Date(populated.createdAt).toLocaleDateString(),
+          order_status: populated.status,
+          order_items: (populated.items || []).map((item) => item.name).join(", "),
+          order_total: fmtAmount(populated.price),
+          currency: "PKR",
+          delivery_address: populated.customerId.address || "",
+          estimated_delivery_date: populated.deliveryDate
+            ? new Date(populated.deliveryDate).toLocaleDateString()
+            : "TBD",
+          order_url: `${process.env.FRONTEND_URL}/orders/${populated._id}?tab=details`,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send new order email:", err.message);
+    }
+  }
+  return populated;
 }
 
 const ALLOWED_ORDER_UPDATE = new Set([
@@ -58,7 +83,6 @@ const ALLOWED_ORDER_UPDATE = new Set([
   "price",
   "deliveryDate",
   "notes",
-  "priority",
 ]);
 
 /**
@@ -102,20 +126,12 @@ function applyOrderUpdates(orderDoc, patch) {
     }
   }
 
-  // Handle priority recalculation if priority or deliveryDate changed
-  if (patch.priority || patch.deliveryDate) {
-    if (orderDoc.status === "delivered") {
-      orderDoc.currentPriority = "completed";
-    } else if (orderDoc.priority === "auto") {
-      orderDoc.currentPriority = calculateAutoPriority(orderDoc.createdAt, orderDoc.deliveryDate);
-    } else {
-      orderDoc.currentPriority = orderDoc.priority;
-    }
-  }
+  // No-op for priority
 }
 
 async function addPaymentToOrder(orderId, amount) {
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId).populate("customerId");
+  console.log(`[Payment] Processing payment for Order #${orderId}. Amount: ${amount}`);
   if (!order) {
     const err = new Error("Order not found");
     err.statusCode = 404;
@@ -150,8 +166,60 @@ async function addPaymentToOrder(orderId, amount) {
     order.paymentStatus = "unpaid";
   }
 
+  console.log(`[Payment] Order #${orderId} updated. New Total Paid: ${order.totalPaid}, Remaining: ${order.remaining}`);
   await order.save();
+  
+  if (order.customerId?.email) {
+    try {
+      await sendTemplatedEmail({
+        templateKey: EMAIL_TEMPLATE_KEYS.NEW_ORDER_PAYMENT,
+        to: order.customerId.email,
+        variables: {
+          user_name: order.customerId.name || "",
+          order_id: String(order._id).slice(-6).toUpperCase(),
+          order_date: new Date(order.createdAt).toLocaleDateString(),
+          payment_id: `${String(order._id).slice(-6).toUpperCase()}-${order.payments.length}`,
+          payment_method: "cash",
+          payment_status: order.paymentStatus,
+          amount_paid: fmtAmount(amount),
+          currency: "PKR",
+          order_total: fmtAmount(order.price),
+          due_amount: fmtAmount(order.remaining),
+          transaction_date: new Date().toLocaleString(),
+          order_url: `${process.env.FRONTEND_URL}/orders/${orderId}?tab=details`,
+        },
+      });
+    } catch (error) {
+      console.error("Payment email error:", error.message);
+    }
+  }
+
   return Order.findById(orderId).populate("customerId").populate("measurementId");
+}
+
+async function sendOrderDeliveryAlert(order) {
+  if (!order) return;
+  try {
+    await sendTemplatedEmail({
+      templateKey: EMAIL_TEMPLATE_KEYS.ORDER_DELIVERY_ALERT,
+      to: process.env.ADMIN_EMAIL || process.env.FROM_EMAIL || "",
+      variables: {
+        admin_name: process.env.ADMIN_NAME || "Admin",
+        order_id: String(order._id).slice(-6).toUpperCase(),
+        customer_name: order.customerId?.name || "",
+        customer_email: order.customerId?.email || "",
+        delivery_date: order.deliveryDate ? new Date(order.deliveryDate).toLocaleDateString() : "",
+        delivery_time: order.deliveryDate ? new Date(order.deliveryDate).toLocaleTimeString() : "",
+        delivery_address: order.customerId?.address || "",
+        order_status: order.status || "",
+        assigned_driver: "N/A",
+        notes: order.notes || "",
+        admin_panel_url: `${process.env.FRONTEND_URL}/orders/${order._id}?tab=details`,
+      },
+    });
+  } catch (error) {
+    console.error("Delivery alert email error:", error.message);
+  }
 }
 
 module.exports = {
@@ -159,4 +227,5 @@ module.exports = {
   pickOrderUpdateFields,
   applyOrderUpdates,
   addPaymentToOrder,
+  sendOrderDeliveryAlert,
 };

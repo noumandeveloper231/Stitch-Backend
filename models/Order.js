@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { ORDER_STATUSES, PAYMENT_STATUSES, ORDER_PRIORITIES } = require("../config/constants");
+const { ORDER_STATUSES, PAYMENT_STATUSES } = require("../config/constants");
 
 const measurementSnapshotSchema = new mongoose.Schema(
   {
@@ -49,20 +49,6 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: PAYMENT_STATUSES,
       default: "unpaid",
-      index: true,
-    },
-    priority: {
-      type: String,
-      enum: ORDER_PRIORITIES,
-      default: "auto",
-      index: true,
-    },
-    // The calculated value for 'auto' or the manual override for display/sorting.
-    // Default is 'low' to ensure a fallback.
-    currentPriority: {
-      type: String,
-      enum: ["low", "medium", "high", "completed"],
-      default: "low",
       index: true,
     },
     items: [itemSchema],

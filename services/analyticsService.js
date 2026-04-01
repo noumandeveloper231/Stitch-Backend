@@ -47,7 +47,14 @@ async function getDashboard({ from, to }) {
     ]),
     Order.aggregate([
       { $match: dateMatch },
-      { $group: { _id: null, total: { $sum: "$price" } } },
+      {
+        $group: {
+          _id: null,
+          totalRevenue: { $sum: "$price" },
+          totalExpense: { $sum: "$totalCost" },
+          totalProfit: { $sum: "$profit" },
+        },
+      },
     ]),
     Order.aggregate([
       { $match: dateMatch },
@@ -55,6 +62,8 @@ async function getDashboard({ from, to }) {
         $group: {
           _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
           revenue: { $sum: "$price" },
+          expense: { $sum: "$totalCost" },
+          profit: { $sum: "$profit" },
         },
       },
       { $sort: { _id: 1 } },
@@ -88,7 +97,7 @@ async function getDashboard({ from, to }) {
     ]),
   ]);
 
-  const revenue = revenueResult[0]?.total || 0;
+  const totals = revenueResult[0] || { totalRevenue: 0, totalExpense: 0, totalProfit: 0 };
   const statusCounts = {};
   statusBreakdown.forEach((s) => {
     statusCounts[s._id] = s.count;
@@ -107,13 +116,17 @@ async function getDashboard({ from, to }) {
     totals: {
       customers: customerCount,
       ordersInRange: orderAgg,
-      revenueInRange: revenue,
+      revenueInRange: totals.totalRevenue,
+      expenseInRange: totals.totalExpense,
+      profitInRange: totals.totalProfit,
     },
     ordersByStatus: statusCounts,
     ordersPerDay: dailyOrders.map((d) => ({ date: d._id, count: d.count })),
-    revenueByMonth: revenueByMonth.map((m) => ({
+    financialsByMonth: revenueByMonth.map((m) => ({
       month: m._id,
       revenue: m.revenue || 0,
+      expense: m.expense || 0,
+      profit: m.profit || 0,
     })),
     recentOrders,
     topCustomers,

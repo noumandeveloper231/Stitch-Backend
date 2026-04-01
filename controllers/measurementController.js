@@ -1,9 +1,33 @@
 const asyncHandler = require("../middleware/asyncHandler");
 const Measurement = require("../models/Measurement");
+const { sendTemplatedEmail } = require("../services/emailSenderService");
+const { EMAIL_TEMPLATE_KEYS } = require("../services/emailTemplateDefaults");
 
 exports.createMeasurement = asyncHandler(async (req, res) => {
   const m = await Measurement.create(req.body);
   const populated = await Measurement.findById(m._id).populate("customerId");
+
+  if (populated?.customerId?.email) {
+    try {
+      await sendTemplatedEmail({
+        templateKey: EMAIL_TEMPLATE_KEYS.NEW_MEASUREMENT,
+        to: populated.customerId.email,
+        variables: {
+          user_name: populated.customerId.name || "",
+          measurement_id: String(populated._id).slice(-8).toUpperCase(),
+          measurement_date: new Date(populated.createdAt).toLocaleDateString(),
+          measurement_type: populated.label || "General",
+          measurement_details: JSON.stringify(populated.values || {}),
+          taken_by: req.user?.id || "staff",
+          notes: "",
+          next_appointment_date: "",
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send measurement email:", err.message);
+    }
+  }
+
   res.status(201).json({ data: populated });
 });
 

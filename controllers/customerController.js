@@ -1,5 +1,7 @@
 const asyncHandler = require("../middleware/asyncHandler");
 const Customer = require("../models/Customer");
+const { sendTemplatedEmail } = require("../services/emailSenderService");
+const { EMAIL_TEMPLATE_KEYS } = require("../services/emailTemplateDefaults");
 
 function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -7,6 +9,27 @@ function escapeRegex(s) {
 
 exports.addCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.create(req.body);
+
+  if (customer.email) {
+    try {
+      await sendTemplatedEmail({
+        templateKey: EMAIL_TEMPLATE_KEYS.NEW_CUSTOMER_WELCOME,
+        to: customer.email,
+        variables: {
+          user_name: customer.name,
+          user_email: customer.email,
+          login_url: `${process.env.FRONTEND_URL}/login`,
+          temporary_password: "",
+          app_name: "StitchFlow",
+          support_email: process.env.SUPPORT_EMAIL || process.env.ADMIN_EMAIL || "",
+          getting_started_url: `${process.env.FRONTEND_URL}/orders`,
+        },
+      });
+    } catch (err) {
+      console.error("Failed to send customer welcome email:", err.message);
+    }
+  }
+
   res.status(201).json({ data: customer });
 });
 
