@@ -82,6 +82,7 @@ exports.getOrders = asyncHandler(async (req, res) => {
     Order.find(filter)
       .populate("customerId")
       .populate("measurementId")
+      .populate("stitchingType")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -98,7 +99,8 @@ exports.getOrders = asyncHandler(async (req, res) => {
 exports.getOrderById = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id)
     .populate("customerId")
-    .populate("measurementId");
+    .populate("measurementId")
+    .populate("stitchingType");
   if (!order) {
     const err = new Error("Order not found");
     err.statusCode = 404;
@@ -128,7 +130,8 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
     { new: true, runValidators: true },
   )
     .populate("customerId")
-    .populate("measurementId");
+    .populate("measurementId")
+    .populate("stitchingType");
   if (!order) {
     const err = new Error("Order not found");
     err.statusCode = 404;
@@ -151,7 +154,8 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   await order.save();
   const fresh = await Order.findById(order._id)
     .populate("customerId")
-    .populate("measurementId");
+    .populate("measurementId")
+    .populate("stitchingType");
   res.json({ data: fresh });
 });
 

@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const Measurement = require("../models/Measurement");
-const { DEFAULT_COST_ITEMS } = require("../config/constants");
+const StitchingType = require("../models/StitchingType");
+const { DEFAULT_COST_ITEMS, STITCHING_STYLES } = require("../config/constants");
 const { sendTemplatedEmail } = require("./emailSenderService");
 const { EMAIL_TEMPLATE_KEYS } = require("./emailTemplateDefaults");
 
@@ -8,21 +9,65 @@ function fmtAmount(v) {
   return Number(v || 0).toLocaleString();
 }
 
+function sanitizeStitchingStyle(style) {
+  return STITCHING_STYLES.includes(style) ? style : STITCHING_STYLES[0];
+}
+
+async function resolveStitchingSelection({ stitchingTypeId, stitchingStyle }) {
+  if (!stitchingTypeId) {
+    return {
+      type: null,
+      style: sanitizeStitchingStyle(stitchingStyle),
+      price: null,
+    };
+  }
+
+  const type = await StitchingType.findById(stitchingTypeId).lean();
+
+  if (!type) {
+    const err = new Error("Stitching type not found");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const style = sanitizeStitchingStyle(stitchingStyle);
+  const price =
+    style === "double" ? Number(type.doublePrice || 0) : Number(type.singlePrice || 0);
+
+  return { type, style, price };
+}
+
 async function createOrderWithMeasurement(payload) {
-  const { customerId, items, price, advance, status, deliveryDate, notes } = payload;
+  const {
+    customerId,
+    items,
+    price,
+    advance,
+    status,
+    deliveryDate,
+    notes,
+    stitchingTypeId,
+    stitchingStyle,
+  } = payload;
   const latest = await Measurement.findOne({ customerId })
     .sort({ createdAt: -1 })
     .lean();
 
+  const stitchingSelection = await resolveStitchingSelection({
+    stitchingTypeId,
+    stitchingStyle,
+  });
+  const resolvedPrice = stitchingSelection.price;
+  const fallbackPrice = Number(price) || 0;
+  const finalPrice = resolvedPrice ?? fallbackPrice;
   const totalCost = (items || []).reduce((sum, item) => sum + (Number(item.cost) || 0), 0);
   const totalPaid = Number(advance) || 0;
-  const priceNum = Number(price) || 0;
   const payments = advance > 0 ? [{ amount: advance, date: new Date() }] : [];
   const createdAt = new Date();
 
   let paymentStatus = "unpaid";
   if (totalPaid > 0) {
-    paymentStatus = totalPaid >= priceNum ? "paid" : "partially_paid";
+    paymentStatus = totalPaid >= finalPrice ? "paid" : "partially_paid";
   }
 
   const doc = {
@@ -32,23 +77,30 @@ async function createOrderWithMeasurement(payload) {
     items: (items && items.length > 0) 
       ? items 
       : DEFAULT_COST_ITEMS.map(name => ({ name, cost: 0 })),
-    price: priceNum,
+    price: finalPrice,
     payments,
     totalCost,
     totalPaid,
-    remaining: Math.max(0, (Number(price) || 0) - totalPaid),
-    profit: (Number(price) || 0) - totalCost,
+    remaining: Math.max(0, finalPrice - totalPaid),
+    profit: finalPrice - totalCost,
     deliveryDate: deliveryDate || null,
     notes: notes || "",
     measurementId: latest ? latest._id : null,
     measurementSnapshot: latest
       ? { label: latest.label || "", values: latest.values || {} }
       : null,
+    stitchingType: stitchingSelection.type ? stitchingSelection.type._id : null,
+    stitchingTypeName: stitchingSelection.type?.name || "",
+    stitchingStyle: stitchingSelection.style,
+    stitchingRate: resolvedPrice ?? finalPrice,
     createdAt,
   };
 
   const order = await Order.create(doc);
-  const populated = await Order.findById(order._id).populate("customerId").populate("measurementId");
+  const populated = await Order.findById(order._id)
+    .populate("customerId")
+    .populate("measurementId")
+    .populate("stitchingType");
   if (populated?.customerId?.email) {
     try {
       await sendTemplatedEmail({
@@ -115,6 +167,9 @@ function applyOrderUpdates(orderDoc, patch) {
     );
     orderDoc.remaining = Math.max(0, (Number(orderDoc.price) || 0) - orderDoc.totalPaid);
     orderDoc.profit = (Number(orderDoc.price) || 0) - orderDoc.totalCost;
+    if (allowed.price !== undefined) {
+      orderDoc.stitchingRate = Number(orderDoc.price) || 0;
+    }
 
     // Update payment status automatically
     if (orderDoc.totalPaid >= orderDoc.price) {
@@ -194,7 +249,10 @@ async function addPaymentToOrder(orderId, amount) {
     }
   }
 
-  return Order.findById(orderId).populate("customerId").populate("measurementId");
+  return Order.findById(orderId)
+    .populate("customerId")
+    .populate("measurementId")
+    .populate("stitchingType");
 }
 
 async function sendOrderDeliveryAlert(order) {

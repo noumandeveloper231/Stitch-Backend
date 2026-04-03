@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { ORDER_STATUSES, PAYMENT_STATUSES } = require("../config/constants");
+const { ORDER_STATUSES, PAYMENT_STATUSES, STITCHING_STYLES } = require("../config/constants");
 
 const measurementSnapshotSchema = new mongoose.Schema(
   {
@@ -60,6 +60,19 @@ const orderSchema = new mongoose.Schema(
     profit: { type: Number, default: 0 },
     deliveryDate: { type: Date, default: null },
     notes: { type: String, default: "" },
+    stitchingType: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "StitchingType",
+      default: null,
+      index: true,
+    },
+    stitchingTypeName: { type: String, default: "" },
+    stitchingStyle: {
+      type: String,
+      enum: STITCHING_STYLES,
+      default: STITCHING_STYLES[0],
+    },
+    stitchingRate: { type: Number, default: 0 },
   },
   { timestamps: true },
 );

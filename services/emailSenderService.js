@@ -15,6 +15,17 @@ async function sendTemplatedEmail({ templateKey, to, variables }) {
   });
 }
 
+async function sendTestTemplatedEmail({ templateKey, to, variables }) {
+  const rendered = await renderTemplate(templateKey, variables);
+  return resend.emails.send({
+    from: process.env.FROM_EMAIL || "no-reply@noumandevs.online",
+    to,
+    subject: `[Test] ${rendered.subject}`,
+    html: rendered.body,
+  });
+}
+
 module.exports = {
   sendTemplatedEmail,
+  sendTestTemplatedEmail,
 };

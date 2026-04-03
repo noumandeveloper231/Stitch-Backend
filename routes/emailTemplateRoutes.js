@@ -10,6 +10,7 @@ const {
   getEmailTemplates,
   getEmailTemplate,
   updateEmailTemplate,
+  sendTestEmail,
 } = require("../controllers/emailTemplateController");
 
 router.use(requireAuth);
@@ -27,6 +28,12 @@ router.put(
   validateParams(emailTemplateKeyParams),
   validateBody(emailTemplateUpdateSchema),
   updateEmailTemplate,
+);
+router.post(
+  "/:key/test-send",
+  checkPermission("Email Templates", "manage"),
+  validateParams(emailTemplateKeyParams),
+  sendTestEmail,
 );
 
 module.exports = router;

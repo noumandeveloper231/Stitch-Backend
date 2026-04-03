@@ -16,13 +16,11 @@ exports.addCustomer = asyncHandler(async (req, res) => {
         templateKey: EMAIL_TEMPLATE_KEYS.NEW_CUSTOMER_WELCOME,
         to: customer.email,
         variables: {
-          user_name: customer.name,
-          user_email: customer.email,
-          login_url: `${process.env.FRONTEND_URL}/login`,
-          temporary_password: "",
-          app_name: "StitchFlow",
+          customer_name: customer.name,
+          customer_email: customer.email,
+          customer_phone: customer.phone || "",
+          customer_address: customer.address || "",
           support_email: process.env.SUPPORT_EMAIL || process.env.ADMIN_EMAIL || "",
-          getting_started_url: `${process.env.FRONTEND_URL}/orders`,
         },
       });
     } catch (err) {
