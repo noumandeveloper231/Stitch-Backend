@@ -1,5 +1,5 @@
 const Joi = require("joi");
-const { ORDER_STATUSES, PAYMENT_STATUSES, USER_ROLES } = require("../config/constants");
+const { ORDER_STATUSES, PAYMENT_STATUSES, USER_ROLES, STITCHING_STYLES } = require("../config/constants");
 const { DEFAULT_EMAIL_TEMPLATES } = require("../services/emailTemplateDefaults");
 const { PERMISSION_MODULES } = require("../config/permissions");
 const {
@@ -62,6 +62,34 @@ exports.customerIdParams = Joi.object({
   id: objectId.required(),
 });
 
+exports.customerNoteCreateSchema = Joi.object({
+  customerId: objectId.required(),
+  subject: Joi.string().trim().min(1).max(200).required(),
+  note: Joi.string().trim().min(1).max(5000).required(),
+  priority: Joi.string().valid("low", "medium", "high").default("medium"),
+  pinned: Joi.boolean().default(false),
+});
+
+exports.customerNoteUpdateSchema = Joi.object({
+  subject: Joi.string().trim().min(1).max(200),
+  note: Joi.string().trim().min(1).max(5000),
+  priority: Joi.string().valid("low", "medium", "high"),
+  pinned: Joi.boolean(),
+}).min(1);
+
+exports.customerNoteListQuerySchema = Joi.object({
+  customerId: objectId.required(),
+  pinned: Joi.boolean(),
+  sort: Joi.string().valid("createdAt", "priority").default("createdAt"),
+  order: Joi.string().valid("asc", "desc").default("desc"),
+  page: Joi.number().integer().min(1).default(DEFAULT_PAGE),
+  limit: Joi.number().integer().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+});
+
+exports.noteIdParams = Joi.object({
+  id: objectId.required(),
+});
+
 exports.measurementCreateSchema = Joi.object({
   customerId: objectId.required(),
   label: Joi.string().trim().allow("").max(200),
@@ -98,6 +126,8 @@ exports.orderCreateSchema = Joi.object({
   status: Joi.string().valid(...ORDER_STATUSES),
   items: Joi.array().items(exports.orderItemSchema).default([]),
   price: Joi.number().min(0).default(0),
+  stitchingTypeId: objectId,
+  stitchingStyle: Joi.string().valid(...STITCHING_STYLES),
   advance: Joi.number().min(0).default(0),
   deliveryDate: Joi.alternatives().try(Joi.date(), Joi.allow(null)),
   notes: Joi.string().allow("").max(2000),
@@ -133,6 +163,33 @@ exports.orderListQuerySchema = Joi.object({
 });
 
 exports.orderIdParams = Joi.object({
+  id: objectId.required(),
+});
+
+exports.stitchingTypeListQuerySchema = Joi.object({
+  q: Joi.string().trim().allow("").max(200),
+  isActive: Joi.boolean(),
+  page: Joi.number().integer().min(1).default(DEFAULT_PAGE),
+  limit: Joi.number().integer().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+}).default();
+
+exports.stitchingTypeCreateSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(150).required(),
+  singlePrice: Joi.number().min(0).required(),
+  doublePrice: Joi.number().min(0).required(),
+  notes: Joi.string().trim().allow("").max(500),
+  isActive: Joi.boolean(),
+});
+
+exports.stitchingTypeUpdateSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(150),
+  singlePrice: Joi.number().min(0),
+  doublePrice: Joi.number().min(0),
+  notes: Joi.string().trim().allow("").max(500),
+  isActive: Joi.boolean(),
+}).min(1);
+
+exports.stitchingTypeIdParams = Joi.object({
   id: objectId.required(),
 });
 
@@ -186,3 +243,91 @@ exports.roleUpdateSchema = Joi.object({
   title: Joi.string().trim().min(1).max(120),
   permissions: Joi.object(permissionsShape),
 }).min(1);
+
+exports.expenseCategoryCreateSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(150).required(),
+  isActive: Joi.boolean().default(true),
+});
+
+exports.expenseCategoryUpdateSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(150),
+  isActive: Joi.boolean(),
+}).min(1);
+
+exports.expenseCategoryListQuerySchema = Joi.object({
+  q: Joi.string().trim().allow("").max(200),
+  isActive: Joi.boolean(),
+  page: Joi.number().integer().min(1).default(DEFAULT_PAGE),
+  limit: Joi.number().integer().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  sort: Joi.string().valid("name", "createdAt").default("createdAt"),
+  order: Joi.string().valid("asc", "desc").default("desc"),
+});
+
+exports.expenseSubcategoryCreateSchema = Joi.object({
+  categoryId: objectId.required(),
+  name: Joi.string().trim().min(1).max(150).required(),
+  isActive: Joi.boolean().default(true),
+});
+
+exports.expenseSubcategoryUpdateSchema = Joi.object({
+  categoryId: objectId,
+  name: Joi.string().trim().min(1).max(150),
+  isActive: Joi.boolean(),
+}).min(1);
+
+exports.expenseSubcategoryListQuerySchema = Joi.object({
+  q: Joi.string().trim().allow("").max(200),
+  categoryId: objectId,
+  isActive: Joi.boolean(),
+  page: Joi.number().integer().min(1).default(DEFAULT_PAGE),
+  limit: Joi.number().integer().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  sort: Joi.string().valid("name", "createdAt").default("createdAt"),
+  order: Joi.string().valid("asc", "desc").default("desc"),
+});
+
+exports.expenseCreateSchema = Joi.object({
+  date: Joi.date().required(),
+  categoryId: objectId.required(),
+  subcategoryId: objectId.required(),
+  title: Joi.string().trim().min(1).max(200).required(),
+  amount: Joi.number().min(0).required(),
+  receipt: Joi.object({
+    url: Joi.string().uri().allow(""),
+    publicId: Joi.string().allow(""),
+    originalName: Joi.string().allow(""),
+  }).default({}),
+  notes: Joi.string().trim().allow("").max(2000),
+});
+
+exports.expenseUpdateSchema = Joi.object({
+  date: Joi.date(),
+  categoryId: objectId,
+  subcategoryId: objectId,
+  title: Joi.string().trim().min(1).max(200),
+  amount: Joi.number().min(0),
+  receipt: Joi.object({
+    url: Joi.string().uri().allow(""),
+    publicId: Joi.string().allow(""),
+    originalName: Joi.string().allow(""),
+  }),
+  notes: Joi.string().trim().allow("").max(2000),
+}).min(1);
+
+exports.expenseListQuerySchema = Joi.object({
+  q: Joi.string().trim().allow("").max(200),
+  dateFrom: Joi.date(),
+  dateTo: Joi.date(),
+  amountMin: Joi.number().min(0),
+  amountMax: Joi.number().min(0),
+  categoryId: objectId,
+  subcategoryId: objectId,
+  page: Joi.number().integer().min(1).default(DEFAULT_PAGE),
+  limit: Joi.number().integer().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+  sort: Joi.string().valid("date", "amount", "createdAt").default("date"),
+  order: Joi.string().valid("asc", "desc").default("desc"),
+});
+
+exports.expenseReceiptUploadSchema = Joi.object({
+  fileData: Joi.string().required(),
+  originalName: Joi.string().trim().allow("").max(255),
+});

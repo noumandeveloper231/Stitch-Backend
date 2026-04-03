@@ -6,6 +6,8 @@ exports.ORDER_STATUSES = [
   "delivered",
 ];
 
+exports.STITCHING_STYLES = ["single", "double"];
+
 exports.PAYMENT_STATUSES = ["unpaid", "partially_paid", "paid"];
 
 
