@@ -159,6 +159,23 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   res.json({ data: fresh });
 });
 
+exports.getOrderSummary = asyncHandler(async (req, res) => {
+  const [totalOrders, revenueResult, pendingOrders, readyOrders] = await Promise.all([
+    Order.countDocuments(),
+    Order.aggregate([{ $group: { _id: null, total: { $sum: "$price" } } }]),
+    Order.countDocuments({ status: "pending" }),
+    Order.countDocuments({ status: "ready" }),
+  ]);
+  res.json({
+    data: {
+      totalOrders,
+      totalRevenue: revenueResult[0]?.total || 0,
+      pendingOrders,
+      readyOrders,
+    },
+  });
+});
+
 exports.deleteOrder = asyncHandler(async (req, res) => {
   const order = await Order.findByIdAndDelete(req.params.id);
   if (!order) {

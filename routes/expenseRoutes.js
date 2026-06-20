@@ -16,6 +16,7 @@ const {
   createExpense,
   updateExpense,
   deleteExpense,
+  getExpenseSummary,
 } = require("../controllers/expenseController");
 
 const expenseIdParams = Joi.object({
@@ -24,6 +25,7 @@ const expenseIdParams = Joi.object({
 
 router.use(requireAuth);
 
+router.get("/summary", checkPermission("Expenses", "show"), getExpenseSummary);
 router.post("/upload-receipt", checkPermission("Expenses", "create"), validateBody(expenseReceiptUploadSchema), uploadReceipt);
 router.get("/next-number", checkPermission("Expenses", "show"), getNextExpenseNumber);
 router.get("/", checkPermission("Expenses", "show"), validateQuery(expenseListQuerySchema), getExpenses);

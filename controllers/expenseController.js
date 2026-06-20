@@ -157,6 +157,19 @@ exports.updateExpense = asyncHandler(async (req, res) => {
   res.json({ data: updated });
 });
 
+exports.getExpenseSummary = asyncHandler(async (req, res) => {
+  const [totalExpenses, amountResult] = await Promise.all([
+    Expense.countDocuments(),
+    Expense.aggregate([{ $group: { _id: null, total: { $sum: "$amount" } } }]),
+  ]);
+  res.json({
+    data: {
+      totalExpenses,
+      totalAmount: amountResult[0]?.total || 0,
+    },
+  });
+});
+
 exports.deleteExpense = asyncHandler(async (req, res) => {
   const deleted = await Expense.findByIdAndDelete(req.params.id);
   if (!deleted) {

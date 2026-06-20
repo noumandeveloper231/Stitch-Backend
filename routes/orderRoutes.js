@@ -22,10 +22,12 @@ const {
   updateOrder,
   deleteOrder,
   addPayment,
+  getOrderSummary,
 } = require("../controllers/orderController");
 
 router.use(requireAuth);
 
+router.get("/summary", getOrderSummary);
 router.post("/", validateBody(orderCreateSchema), createOrder);
 router.post(
   "/:id/payment",

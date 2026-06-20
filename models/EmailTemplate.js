@@ -14,6 +14,4 @@ const emailTemplateSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-emailTemplateSchema.index({ key: 1 }, { unique: true });
-
 module.exports = mongoose.model("EmailTemplate", emailTemplateSchema);

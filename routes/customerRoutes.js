@@ -17,10 +17,12 @@ const {
   getCustomerById,
   updateCustomer,
   deleteCustomer,
+  getCustomerSummary,
 } = require("../controllers/customerController");
 
 router.use(requireAuth);
 
+router.get("/summary", getCustomerSummary);
 router.get("/", validateQuery(customerListQuerySchema), getCustomers);
 router.get("/:id", validateParams(customerIdParams), getCustomerById);
 router.post("/", validateBody(customerCreateSchema), addCustomer);

@@ -80,6 +80,11 @@ exports.updateCustomer = asyncHandler(async (req, res) => {
   res.json({ data: customer });
 });
 
+exports.getCustomerSummary = asyncHandler(async (req, res) => {
+  const totalCustomers = await Customer.countDocuments();
+  res.json({ data: { totalCustomers } });
+});
+
 exports.deleteCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findByIdAndDelete(req.params.id);
   if (!customer) {
