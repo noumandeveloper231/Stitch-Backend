@@ -13,6 +13,7 @@ const PERMISSION_MODULES = [
   "Users",
   "Roles",
   "Email Templates",
+  "Employees",
 ];
 
 const PERMISSION_ACTIONS = ["show", "create", "delete", "manage"];

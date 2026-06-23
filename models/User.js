@@ -10,14 +10,18 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
-    password: { type: String, select: false }, // Password can be null initially if tempPassword exists
-    tempPassword: { type: String, default: "" }, // Used for first-time login
+    password: { type: String, select: false },
     phone: { type: String, trim: true, default: "" },
     profilePicture: { type: String, default: "" },
     role: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Role",
       required: true,
+    },
+    invitationStatus: {
+      type: String,
+      enum: ["invited", "active", "disabled"],
+      default: "invited",
     },
   },
   { timestamps: true },

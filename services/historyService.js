@@ -58,8 +58,7 @@ async function logLogin(user, req) {
       }
     }
 
-    await LoggedHistory.create({
-      userId: user._id,
+    const logEntry = {
       email: user.email,
       ip,
       userAgent,
@@ -68,7 +67,17 @@ async function logLogin(user, req) {
       state,
       country,
       loginDate: new Date(),
-    });
+    };
+
+    if (user.entityType === "employee" || user.firstName) {
+      logEntry.employeeId = user._id;
+      logEntry.entityType = "employee";
+    } else {
+      logEntry.userId = user._id;
+      logEntry.entityType = "user";
+    }
+
+    await LoggedHistory.create(logEntry);
   } catch (error) {
     console.error("Failed to log login history:", error.message);
     // Don't throw error to avoid blocking the login process

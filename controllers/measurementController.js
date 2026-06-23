@@ -86,7 +86,7 @@ exports.getLatestForCustomer = asyncHandler(async (req, res) => {
 
 exports.updateMeasurement = asyncHandler(async (req, res) => {
   const m = await Measurement.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   }).populate("customerId");
   if (!m) {

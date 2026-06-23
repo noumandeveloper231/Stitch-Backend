@@ -29,8 +29,8 @@ exports.updateEmailTemplate = asyncHandler(async (req, res) => {
 });
 
 exports.sendTestEmail = asyncHandler(async (req, res) => {
-  if (!process.env.RESEND_API_KEY) {
-    const err = new Error("Email sending is not configured (missing RESEND_API_KEY)");
+  if (!process.env.BREVO_API_KEY) {
+    const err = new Error("Email sending is not configured (missing BREVO_API_KEY)");
     err.statusCode = 503;
     throw err;
   }
@@ -49,17 +49,11 @@ exports.sendTestEmail = asyncHandler(async (req, res) => {
     variables: EMAIL_TEMPLATE_SAMPLE_VARIABLES,
   });
 
-  if (result?.error) {
-    const err = new Error(result.error.message || "Failed to send test email");
-    err.statusCode = 502;
-    throw err;
-  }
-
   res.json({
     data: {
       ok: true,
       to,
-      messageId: result?.data?.id ?? null,
+      messageId: result?.messageId ?? null,
     },
   });
 });

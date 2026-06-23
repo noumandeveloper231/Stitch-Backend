@@ -34,7 +34,7 @@ exports.getCustomerNotes = asyncHandler(async (req, res) => {
 
 exports.updateCustomerNote = asyncHandler(async (req, res) => {
   const note = await CustomerNote.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!note) {

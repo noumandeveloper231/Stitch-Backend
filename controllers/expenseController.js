@@ -142,7 +142,7 @@ exports.updateExpense = asyncHandler(async (req, res) => {
   await ensureCategorySubcategoryRelation(nextCategoryId, nextSubcategoryId);
 
   const updated = await Expense.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   })
     .populate("categoryId")

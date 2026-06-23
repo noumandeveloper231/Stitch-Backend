@@ -44,7 +44,7 @@ exports.createStitchingType = asyncHandler(async (req, res) => {
 
 exports.updateStitchingType = asyncHandler(async (req, res) => {
   const type = await StitchingType.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!type) {

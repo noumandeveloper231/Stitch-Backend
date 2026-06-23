@@ -5,6 +5,9 @@ const EMAIL_TEMPLATE_KEYS = {
   ORDER_DELIVERY_ALERT: "order_delivery_alert",
   NEW_ORDER: "new_order",
   NEW_MEASUREMENT: "new_measurement",
+  USER_INVITATION: "user_invitation",
+  EMPLOYEE_INVITATION: "employee_invitation",
+  EMPLOYEE_TASK_ASSIGNED: "employee_task_assigned",
 };
 
 const DEFAULT_EMAIL_TEMPLATES = [
@@ -118,6 +121,51 @@ const DEFAULT_EMAIL_TEMPLATES = [
     enabled: true,
     subject: "New measurement recorded ({{measurement_id}})",
     body: `<p>Hello {{user_name}},</p><p>Your new measurement has been recorded.</p><p>Measurement ID: {{measurement_id}}<br/>Date: {{measurement_date}}<br/>Type: {{measurement_type}}<br/>Details: {{measurement_details}}<br/>Taken by: {{taken_by}}<br/>Notes: {{notes}}<br/>Next appointment: {{next_appointment_date}}</p>`,
+  },
+  {
+    key: EMAIL_TEMPLATE_KEYS.USER_INVITATION,
+    templateName: "User Invitation",
+    templateType: "user",
+    placeholders: [
+      "{{user_name}}",
+      "{{invitation_url}}",
+      "{{invitation_token}}",
+      "{{account_role}}",
+      "{{expiry_hours}}",
+    ],
+    enabled: true,
+    subject: "You're invited to join StitchFlow",
+    body: `<p>Hello {{user_name}},</p><p>You've been invited to join StitchFlow.</p><p>Click the button below to set up your account and get started. This invitation will expire in {{expiry_hours}} hours.</p><p style="text-align:center;margin:32px 0"><a href="{{invitation_url}}" style="display:inline-block;padding:14px 32px;background-color:#111827;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px">Accept Invitation</a></p><p>Or copy and paste this link in your browser:</p><p style="word-break:break-all;font-size:13px;color:#6b7280">{{invitation_url}}</p>`,
+  },
+  {
+    key: EMAIL_TEMPLATE_KEYS.EMPLOYEE_INVITATION,
+    templateName: "Employee Invitation",
+    templateType: "employee",
+    placeholders: [
+      "{{employee_name}}",
+      "{{invitation_url}}",
+      "{{invitation_token}}",
+      "{{expiry_hours}}",
+    ],
+    enabled: true,
+    subject: "You're invited to join StitchFlow as an employee",
+    body: `<p>Hello {{employee_name}},</p><p>You've been invited to join StitchFlow as an employee.</p><p>Click the button below to set up your account and get started. This invitation will expire in {{expiry_hours}} hours.</p><p style="text-align:center;margin:32px 0"><a href="{{invitation_url}}" style="display:inline-block;padding:14px 32px;background-color:#111827;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px">Accept Invitation</a></p><p>Or copy and paste this link in your browser:</p><p style="word-break:break-all;font-size:13px;color:#6b7280">{{invitation_url}}</p>`,
+  },
+  {
+    key: EMAIL_TEMPLATE_KEYS.EMPLOYEE_TASK_ASSIGNED,
+    templateName: "New Task Assigned",
+    templateType: "employee",
+    placeholders: [
+      "{{employee_name}}",
+      "{{order_id}}",
+      "{{task_name}}",
+      "{{order_status}}",
+      "{{customer_name}}",
+      "{{dashboard_url}}",
+    ],
+    enabled: true,
+    subject: "New task assigned: {{task_name}} for order {{order_id}}",
+    body: `<p>Hello {{employee_name}},</p><p>You have been assigned a new task for order <strong>{{order_id}}</strong>.</p><p>Task: {{task_name}}<br/>Order Status: {{order_status}}<br/>Customer: {{customer_name}}</p><p style="text-align:center;margin:32px 0"><a href="{{dashboard_url}}" style="display:inline-block;padding:14px 32px;background-color:#111827;color:#ffffff;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px">View in Dashboard</a></p>`,
   },
 ];
 

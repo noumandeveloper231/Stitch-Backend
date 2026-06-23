@@ -37,6 +37,7 @@ app.use("/api/history", require("./routes/historyRoutes"));
 app.use("/api/customers", require("./routes/customerRoutes"));
 app.use("/api/customer-notes", require("./routes/customerNoteRoutes"));
 app.use("/api/orders", require("./routes/orderRoutes"));
+app.use("/api/orders/:orderId/assignments", require("./routes/orderAssignmentRoutes"));
 app.use("/api/measurements", require("./routes/measurementRoutes"));
 app.use("/api/expenses", require("./routes/expenseRoutes"));
 app.use("/api/expense-categories", require("./routes/expenseCategoryRoutes"));
@@ -47,6 +48,9 @@ app.use("/api/email-templates", require("./routes/emailTemplateRoutes"));
 app.use("/api/notifications", require("./routes/notificationRoutes"));
 app.use("/api/search", require("./routes/searchRoutes"));
 app.use("/api/cron", require("./routes/cronRoutes"));
+app.use("/api/invitations", require("./routes/invitationRoutes"));
+app.use("/api/employee-auth", require("./routes/employeeAuthRoutes"));
+app.use("/api/employees", require("./routes/employeeRoutes"));
 
 app.get("/", (req, res) => {
   res.send("Stitch API running");

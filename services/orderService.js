@@ -1,9 +1,11 @@
 const Order = require("../models/Order");
+const OrderAssignment = require("../models/OrderAssignment");
 const Measurement = require("../models/Measurement");
 const StitchingType = require("../models/StitchingType");
 const { DEFAULT_COST_ITEMS, STITCHING_STYLES } = require("../config/constants");
 const { sendTemplatedEmail } = require("./emailSenderService");
 const { EMAIL_TEMPLATE_KEYS } = require("./emailTemplateDefaults");
+const orderAssignmentService = require("./orderAssignmentService");
 
 function fmtAmount(v) {
   return Number(v || 0).toLocaleString();
@@ -40,6 +42,7 @@ async function resolveStitchingSelection({ stitchingTypeId, stitchingStyle }) {
 async function createOrderWithMeasurement(payload) {
   const {
     customerId,
+    measurementId,
     items,
     price,
     advance,
@@ -49,9 +52,15 @@ async function createOrderWithMeasurement(payload) {
     stitchingTypeId,
     stitchingStyle,
   } = payload;
-  const latest = await Measurement.findOne({ customerId })
-    .sort({ createdAt: -1 })
-    .lean();
+  let measurement = null;
+  if (measurementId) {
+    measurement = await Measurement.findById(measurementId).lean();
+  }
+  if (!measurement) {
+    measurement = await Measurement.findOne({ customerId })
+      .sort({ createdAt: -1 })
+      .lean();
+  }
 
   const stitchingSelection = await resolveStitchingSelection({
     stitchingTypeId,
@@ -85,9 +94,9 @@ async function createOrderWithMeasurement(payload) {
     profit: finalPrice - totalCost,
     deliveryDate: deliveryDate || null,
     notes: notes || "",
-    measurementId: latest ? latest._id : null,
-    measurementSnapshot: latest
-      ? { label: latest.label || "", values: latest.values || {} }
+    measurementId: measurement ? measurement._id : null,
+    measurementSnapshot: measurement
+      ? { label: measurement.label || "", values: measurement.values || {} }
       : null,
     stitchingType: stitchingSelection.type ? stitchingSelection.type._id : null,
     stitchingTypeName: stitchingSelection.type?.name || "",
@@ -97,6 +106,28 @@ async function createOrderWithMeasurement(payload) {
   };
 
   const order = await Order.create(doc);
+
+  if (payload.assignments && Array.isArray(payload.assignments) && payload.assignments.length > 0) {
+    const assignmentDocs = payload.assignments.map((a, i) => {
+      const item = (order.items || [])[i];
+      return {
+        orderId: order._id,
+        costBreakdownItemId: item ? item._id : (a.costBreakdownItemId || null),
+        employeeId: a.employeeId || null,
+        taskName: a.taskName || (item ? item.name : ""),
+        status: a.status || "pending",
+      };
+    }).filter((a) => a.costBreakdownItemId);
+    if (assignmentDocs.length > 0) {
+      const created = await OrderAssignment.insertMany(assignmentDocs);
+      for (const assignment of created) {
+        if (assignment.employeeId) {
+          await orderAssignmentService.sendAssignmentEmail(assignment, order._id).catch(() => {});
+        }
+      }
+    }
+  }
+
   const populated = await Order.findById(order._id)
     .populate("customerId")
     .populate("measurementId")

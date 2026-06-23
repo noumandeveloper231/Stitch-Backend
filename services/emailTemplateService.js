@@ -62,7 +62,7 @@ async function updateTemplateByKey(key, patch) {
   const updated = await EmailTemplate.findOneAndUpdate(
     { key },
     { $set: nextPatch, $inc: { version: 1 } },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   ).lean();
 
   if (!updated) {

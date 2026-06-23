@@ -33,14 +33,14 @@ function refreshExpiryMs() {
 
 function signAccessToken(user) {
   return jwt.sign(
-    { sub: user._id.toString(), role: user.role?._id || user.role },
+    { sub: user._id.toString(), role: user.role?._id || user.role, type: "user" },
     accessSecret(),
     { expiresIn: accessExpiry() },
   );
 }
 
 function signRefreshToken(userId) {
-  return jwt.sign({ sub: userId.toString(), type: "refresh" }, refreshSecret(), {
+  return jwt.sign({ sub: userId.toString(), type: "user", tokenType: "refresh" }, refreshSecret(), {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRY || "7d",
   });
 }
@@ -48,7 +48,7 @@ function signRefreshToken(userId) {
 async function persistRefreshToken(userId, rawRefreshJwt) {
   const tokenHash = hashToken(rawRefreshJwt);
   const expiresAt = new Date(Date.now() + refreshExpiryMs());
-  await RefreshToken.create({ userId, tokenHash, expiresAt });
+  await RefreshToken.create({ userId, tokenHash, entityType: "user", expiresAt });
 }
 
 async function issueTokens(user) {
@@ -95,29 +95,19 @@ async function login({ email, password }, req) {
     throw err;
   }
 
-  let isTempPassword = false;
-  let ok = false;
-
-  // Check if tempPassword exists and matches
-  if (user.tempPassword && user.tempPassword !== "") {
-    if (password === user.tempPassword) {
-      ok = true;
-      isTempPassword = true;
-    }
-  } 
-  
-  // If not a temp password match, check regular hashed password
-  if (!ok && user.password) {
-    ok = await bcrypt.compare(password, user.password);
+  if (!user.password) {
+    const err = new Error("Account has not been activated yet. Please use the invitation link sent to your email.");
+    err.statusCode = 403;
+    throw err;
   }
 
+  const ok = await bcrypt.compare(password, user.password);
   if (!ok) {
     const err = new Error("Invalid email or password");
     err.statusCode = 401;
     throw err;
   }
 
-  // Log login history
   if (req) {
     await logLogin(user, req);
   }
@@ -131,7 +121,6 @@ async function login({ email, password }, req) {
       role: user.role,
     },
     ...tokens,
-    forcePasswordChange: isTempPassword,
   };
 }
 
@@ -139,11 +128,8 @@ async function changePassword(userId, { newPassword }) {
   const hashedPassword = await bcrypt.hash(newPassword, 10);
   const user = await User.findByIdAndUpdate(
     userId,
-    {
-      password: hashedPassword,
-      tempPassword: "",
-    },
-    { new: true }
+    { password: hashedPassword },
+    { returnDocument: "after" }
   ).populate("role");
 
   if (!user) {
@@ -169,13 +155,13 @@ async function refresh(rawRefreshToken) {
     err.statusCode = 401;
     throw err;
   }
-  if (decoded.type !== "refresh") {
+  if (decoded.tokenType !== "refresh" || decoded.type !== "user") {
     const err = new Error("Invalid refresh token");
     err.statusCode = 401;
     throw err;
   }
   const tokenHash = hashToken(rawRefreshToken);
-  const doc = await RefreshToken.findOne({ tokenHash, userId: decoded.sub });
+  const doc = await RefreshToken.findOne({ tokenHash, userId: decoded.sub, entityType: "user" });
   if (!doc || doc.expiresAt < new Date()) {
     const err = new Error("Invalid or expired refresh token");
     err.statusCode = 401;
@@ -224,4 +210,6 @@ module.exports = {
   getMe,
   signAccessToken,
   hashToken,
+  issueTokens,
+  persistRefreshToken,
 };

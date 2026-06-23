@@ -5,10 +5,6 @@ const Role = require("../models/Role");
 
 dotenv.config();
 
-/**
- * Script to promote a user to Admin role
- * Usage: node scripts/makeAdmin.js your-email@example.com
- */
 async function makeAdmin() {
   const email = process.argv[2];
   if (!email) {

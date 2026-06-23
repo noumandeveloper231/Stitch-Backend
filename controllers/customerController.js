@@ -69,7 +69,7 @@ exports.getCustomerById = asyncHandler(async (req, res) => {
 
 exports.updateCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!customer) {

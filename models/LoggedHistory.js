@@ -5,7 +5,15 @@ const loggedHistorySchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+    },
+    employeeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee",
+    },
+    entityType: {
+      type: String,
+      enum: ["user", "employee"],
+      default: "user",
     },
     email: {
       type: String,
@@ -24,7 +32,7 @@ const loggedHistorySchema = new mongoose.Schema(
     state: { type: String, default: "" },
     country: { type: String, default: "" },
     system: {
-      type: String, // Linux, Mac, Windows
+      type: String,
       default: "Unknown",
     },
     userAgent: { type: String, default: "" },

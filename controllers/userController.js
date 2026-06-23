@@ -1,8 +1,6 @@
 const asyncHandler = require("../middleware/asyncHandler");
 const User = require("../models/User");
-const Role = require("../models/Role");
-const { sendTemplatedEmail } = require("../services/emailSenderService");
-const { EMAIL_TEMPLATE_KEYS } = require("../services/emailTemplateDefaults");
+const invitationService = require("../services/invitationService");
 
 exports.getUsers = asyncHandler(async (req, res) => {
   const users = await User.find().populate("role").lean();
@@ -17,40 +15,40 @@ exports.createUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Email already in use" });
   }
 
-  // Generate temporary password
-  const tempPassword = Math.random().toString(36).slice(-8);
-
   const user = await User.create({
     name,
     email,
     phone,
     role: roleId,
-    tempPassword, // Shown to admin once
+    invitationStatus: "invited",
   });
 
-  // Send email to user
+  const { rawToken } = await invitationService.createInvitation({
+    email,
+    entityType: "user",
+    entityId: user._id,
+    createdBy: req.user.id,
+    req,
+  });
+
   if (email) {
     try {
-      const role = await Role.findById(roleId).lean();
-      await sendTemplatedEmail({
-        templateKey: EMAIL_TEMPLATE_KEYS.NEW_USER_AUTH_CREDENTIALS,
-        to: email,
-        variables: {
-          user_name: name,
-          user_email: email,
-          login_url: `${process.env.FRONTEND_URL}/login`,
-          temporary_password: tempPassword,
-          account_role: role?.title || "user",
-        },
+      const role = await require("mongoose").model("Role").findById(roleId).lean();
+      await invitationService.sendInvitationEmail({
+        rawToken,
+        entityType: "user",
+        entityId: user._id,
+        email,
+        name,
       });
     } catch (err) {
-      console.error("Failed to send welcome email:", err.message);
+      console.error("Failed to send invitation email:", err.message);
     }
   }
 
-  res.status(201).json({ 
-    data: user, 
-    tempPassword // Return temp password to admin for one-time copy
+  res.status(201).json({
+    data: user,
+    message: "User created. Invitation email sent.",
   });
 });
 
@@ -59,7 +57,7 @@ exports.updateUser = asyncHandler(async (req, res) => {
   const user = await User.findByIdAndUpdate(
     req.params.id,
     { name, email, phone, role: roleId, profilePicture },
-    { new: true }
+    { returnDocument: "after" },
   ).populate("role");
 
   if (!user) {

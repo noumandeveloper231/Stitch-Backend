@@ -8,6 +8,7 @@ const {
   addPaymentToOrder,
   sendOrderDeliveryAlert,
 } = require("../services/orderService");
+const orderAssignmentService = require("../services/orderAssignmentService");
 const { renderInvoicePdf } = require("../services/invoicePdfService");
 
 function escapeRegex(s) {
@@ -127,7 +128,7 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
   const order = await Order.findByIdAndUpdate(
     req.params.id,
     { status: req.body.status },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   )
     .populate("customerId")
     .populate("measurementId")
@@ -144,7 +145,8 @@ exports.updateOrderStatus = asyncHandler(async (req, res) => {
 });
 
 exports.updateOrder = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id);
+  const orderId = req.params.id;
+  const order = await Order.findById(orderId);
   if (!order) {
     const err = new Error("Order not found");
     err.statusCode = 404;
@@ -152,6 +154,21 @@ exports.updateOrder = asyncHandler(async (req, res) => {
   }
   applyOrderUpdates(order, req.body);
   await order.save();
+
+  if (req.body.items) {
+    const freshItems = (req.body.items || []).filter((it) => it.name?.trim());
+    const assignmentList = (req.body.assignments || freshItems).map((a, i) => {
+      const item = freshItems[i] || {};
+      return {
+        costBreakdownItemId: a.costBreakdownItemId || item._id || null,
+        employeeId: a.employeeId || null,
+        taskName: a.taskName || item.name || "",
+        status: a.status || "pending",
+      };
+    });
+    await orderAssignmentService.replaceAssignments(orderId, assignmentList);
+  }
+
   const fresh = await Order.findById(order._id)
     .populate("customerId")
     .populate("measurementId")

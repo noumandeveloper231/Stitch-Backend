@@ -31,7 +31,7 @@ exports.updateRole = asyncHandler(async (req, res) => {
       patch.title || currentRole.title,
     );
   }
-  const role = await Role.findByIdAndUpdate(req.params.id, patch, { new: true });
+  const role = await Role.findByIdAndUpdate(req.params.id, patch, { returnDocument: "after" });
   if (!role) {
     return res.status(404).json({ message: "Role not found" });
   }

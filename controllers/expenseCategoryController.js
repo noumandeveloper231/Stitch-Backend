@@ -33,7 +33,7 @@ exports.createExpenseCategory = asyncHandler(async (req, res) => {
 
 exports.updateExpenseCategory = asyncHandler(async (req, res) => {
   const updated = await ExpenseCategory.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
   if (!updated) {

@@ -121,10 +121,19 @@ exports.orderItemSchema = Joi.object({
   cost: Joi.number().min(0).required(),
 });
 
+const orderAssignmentItemSchema = Joi.object({
+  costBreakdownItemId: Joi.any(),
+  employeeId: Joi.any().allow(null),
+  taskName: Joi.string().allow(""),
+  status: Joi.string().valid("pending", "in_progress", "completed", "cancelled"),
+});
+
 exports.orderCreateSchema = Joi.object({
   customerId: objectId.required(),
+  measurementId: objectId.allow(null).default(null),
   status: Joi.string().valid(...ORDER_STATUSES),
   items: Joi.array().items(exports.orderItemSchema).default([]),
+  assignments: Joi.array().items(orderAssignmentItemSchema).optional(),
   price: Joi.number().min(0).default(0),
   stitchingTypeId: objectId,
   stitchingStyle: Joi.string().valid(...STITCHING_STYLES),
@@ -137,6 +146,7 @@ exports.orderUpdateSchema = Joi.object({
   status: Joi.string().valid(...ORDER_STATUSES),
   paymentStatus: Joi.string().valid(...PAYMENT_STATUSES),
   items: Joi.array().items(exports.orderItemSchema),
+  assignments: Joi.array().items(orderAssignmentItemSchema).optional(),
   price: Joi.number().min(0),
   deliveryDate: Joi.alternatives().try(Joi.date(), Joi.allow(null)),
   notes: Joi.string().allow("").max(2000),
