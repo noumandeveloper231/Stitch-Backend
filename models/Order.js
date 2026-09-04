@@ -1,0 +1,80 @@
+const mongoose = require("mongoose");
+const { ORDER_STATUSES, PAYMENT_STATUSES, STITCHING_STYLES } = require("../config/constants");
+
+const measurementSnapshotSchema = new mongoose.Schema(
+  {
+    label: { type: String, default: "" },
+    values: { type: mongoose.Schema.Types.Mixed, default: {} },
+  },
+  { _id: false },
+);
+
+const itemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  cost: { type: Number, required: true, default: 0 },
+});
+
+const paymentSchema = new mongoose.Schema(
+  {
+    amount: { type: Number, required: true },
+    date: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
+const orderSchema = new mongoose.Schema(
+  {
+    customerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+      index: true,
+    },
+    measurementId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Measurement",
+      default: null,
+    },
+    measurementSnapshot: { type: measurementSnapshotSchema, default: null },
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      default: "pending",
+      index: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: PAYMENT_STATUSES,
+      default: "unpaid",
+      index: true,
+    },
+    items: [itemSchema],
+    totalCost: { type: Number, default: 0 },
+    price: { type: Number, default: 0 },
+    payments: [paymentSchema],
+    totalPaid: { type: Number, default: 0 },
+    remaining: { type: Number, default: 0 },
+    profit: { type: Number, default: 0 },
+    deliveryDate: { type: Date, default: null },
+    notes: { type: String, default: "" },
+    stitchingType: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "StitchingType",
+      default: null,
+      index: true,
+    },
+    stitchingTypeName: { type: String, default: "" },
+    stitchingStyle: {
+      type: String,
+      enum: STITCHING_STYLES,
+      default: STITCHING_STYLES[0],
+    },
+    stitchingRate: { type: Number, default: 0 },
+  },
+  { timestamps: true },
+);
+
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ deliveryDate: 1 });
+
+module.exports = mongoose.model("Order", orderSchema);

@@ -1,0 +1,47 @@
+/**
+ * Fixed sample values for email template test sends.
+ * Keys match {{token}} names used in emailTemplateDefaults.js (interpolateTemplate strips braces).
+ */
+const EMAIL_TEMPLATE_SAMPLE_VARIABLES = {
+  user_name: "Alex Sample",
+  user_email: "alex.sample@example.com",
+  order_id: "ORD-10042",
+  order_date: "April 2, 2026",
+  payment_id: "pay_9K2mNpQr",
+  payment_method: "Card ending 4242",
+  payment_status: "Paid",
+  amount_paid: "149.00",
+  currency: "USD",
+  order_total: "149.00",
+  due_amount: "0.00",
+  transaction_date: "2026-04-02 14:30 UTC",
+  order_url: "https://example.com/orders/ORD-10042",
+  login_url: "https://example.com/login",
+  temporary_password: "TempPass!2026",
+  app_name: "StitchFlow",
+  support_email: "support@example.com",
+  getting_started_url: "https://example.com/getting-started",
+  account_role: "Staff",
+  admin_name: "Jordan Admin",
+  customer_name: "Sam Customer",
+  customer_email: "sam.customer@example.com",
+  customer_phone: "+1 (555) 010-0199",
+  customer_address: "88 Sample Street, Metro City, ST 10001",
+  delivery_date: "April 5, 2026",
+  delivery_time: "2:00 PM – 4:00 PM",
+  delivery_address: "123 Tailor Lane, Suite 4, Sample City, ST 12345",
+  order_status: "Ready for delivery",
+  assigned_driver: "Taylor Driver",
+  notes: "Ring doorbell twice. Leave with concierge if no answer.",
+  admin_panel_url: "https://example.com/admin/orders/ORD-10042",
+  order_items: "2× Custom shirt, 1× Trousers",
+  estimated_delivery_date: "April 6, 2026",
+  measurement_id: "MSR-8831",
+  measurement_date: "April 1, 2026",
+  measurement_type: "Full body",
+  measurement_details: "Chest 102cm, waist 86cm, inseam 81cm",
+  taken_by: "Riley Taylor",
+  next_appointment_date: "April 15, 2026",
+};
+
+module.exports = { EMAIL_TEMPLATE_SAMPLE_VARIABLES };
